@@ -1,24 +1,12 @@
 <?php
-
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
 require 'vendor/autoload.php';
 
 use GuzzleHttp\Client;
 use Firebase\JWT\JWT;
 use Laminas\Math\Rand;
 
-
-try {
-    $walletPass = new WalletPass('config/walletconfig.json');
-    echo $walletPass->createPassObject();
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['error' => $e->getMessage()]);
-}
-
-
+$jsonData = file_get_contents('config/walletconfig.json');
+$credentials = json_decode($jsonData, true);
 
 class WalletPass {
     private $credentials;
@@ -27,8 +15,14 @@ class WalletPass {
     private $issuerId = '3388000000022754147';
     private $classId;
 
+
     public function __construct($credentialsPath) {
         $this->credentials = json_decode(file_get_contents($credentialsPath), true);
+
+        if ($this->credentials === null) {
+            die('Fehler beim Laden der JSON-Datei: ' . json_last_error_msg());
+        }
+
         $this->client = new Client();
         $this->classId = $this->issuerId . '.meins';
     }
@@ -67,29 +61,30 @@ class WalletPass {
         $randomNumber = 1000 + ($randomNumber % 9000);      
         $objectId = "{$this->issuerId}.{$randomNumber}"; 
 
-        $form_accountNumber = htmlspecialchars($_POST['form_accountNumber']);
+        $form_school = htmlspecialchars($_POST['form_school']);
         $form_firstName = htmlspecialchars($_POST['form_firstName']);
         $form_lastName = htmlspecialchars($_POST['form_lastName']);
 
-        $accountNumber = $form_accountNumber;
+        $school = $randomNumber;
         $codabar = $this->formatCodabar($accountNumber);
         $firstName = $form_firstName;
         $lastName = $form_lastName;
+        
 
         $genericObject = [
             'id' => $objectId,
             'classId' => $this->classId,
             'genericType' => 'GENERIC_TYPE_UNSPECIFIED',
-            "state" => "ACTIVE",
+            'url' => 'https://google.com',
             'logo' => [
                 'sourceUri' => [
-                    'uri' => ''
+                    'uri' => 'https://www.alleycat.org/wp-content/uploads/2019/03/FELV-cat.jpg'
                 ]
             ],
             'cardTitle' => [
                 'defaultValue' => [
                     'language' => 'en',
-                    'value' => '1'
+                    'value' => 'hgfgfhfh'
                 ]
             ],
             'header' => [
@@ -106,7 +101,7 @@ class WalletPass {
             'hexBackgroundColor' => '#6e3acf',
             'heroImage' => [
                 'sourceUri' => [
-                    'uri' => ''
+                    'uri' => 'https://www.alleycat.org/wp-content/uploads/2019/03/FELV-cat.jpg'
                 ],
                 'contentDescription' => [
                     'defaultValue' => [
@@ -117,6 +112,71 @@ class WalletPass {
             ]
         ];
 
+        $genericObject = [
+            'id' => $objectId,
+            'classId' => $this->classId,
+            'logo' => [
+                'sourceUri' => [
+                    'uri' => 'https://storage.googleapis.com/wallet-lab-tools-codelab-artifacts-public/pass_google_logo.jpg'
+                ],
+                'contentDescription' => [
+                    'defaultValue' => [
+                        'language' => 'en-US',
+                        'value' => 'LOGO_IMAGE_DESCRIPTION'
+                    ]
+                ]
+            ],
+            'cardTitle' => [
+                'defaultValue' => [
+                    'language' => 'en-US',
+                    'value' => 'Schülerausweiß'
+                ]
+            ],
+            'subheader' => [
+                'defaultValue' => [
+                    'language' => 'en-US',
+                    'value' => $school
+                ]
+            ],
+            'header' => [
+                'defaultValue' => [
+                    'language' => 'en-US',
+                    'value' => $firstName . ' ' . $lastName
+                ]
+            ],
+            'textModulesData' => [
+                [
+                    'id' => 'points',
+                    'header' => 'POINTS',
+                    'body' => '1112'
+                ],
+                [
+                    'id' => 'contacts',
+                    'header' => 'CONTACTS',
+                    'body' => '79'
+                ]
+            ],
+            'barcode' => [
+                'type' => 'QR_CODE',
+                'value' => 'BARCODE_VALUE',
+                'alternateText' => ''
+            ],
+            'hexBackgroundColor' => '#4285f4',
+            'heroImage' => [
+                'sourceUri' => [
+                    'uri' => 'https://storage.googleapis.com/wallet-lab-tools-codelab-artifacts-public/google-io-hero-demo-only.png'
+                ],
+                'contentDescription' => [
+                    'defaultValue' => [
+                        'language' => 'en-US',
+                        'value' => 'HERO_IMAGE_DESCRIPTION'
+                    ]
+                ]
+            ]
+        ];
+        
+        
+        
         $claims = [
             'iss' => $this->credentials['client_email'],
             'aud' => 'google',
@@ -128,23 +188,25 @@ class WalletPass {
         ];
 
         $token = JWT::encode($claims, $this->credentials['private_key'], 'RS256');
-
-        $host = "pay.google.com";
-        $saveUrl = "https://{$host}/gp/v/save/{$token}";
+        $saveUrl = "https://pay.google.com/gp/v/save/{$token}";
 
         return $saveUrl;
+
+
     }
 }
 
-$allowedOrigins = 'https://pay.google.com';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    header("Access-Control-Allow-Origin: $allowedOrigins");
+    header("Access-Control-Allow-Origin: *");
     header("Access-Control-Allow-Methods: POST");
     header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
     $walletPass = new WalletPass('config/walletconfig.json');
 
     echo $walletPass->createPassObject();
-}
+
+
 ?>
+
+
+
