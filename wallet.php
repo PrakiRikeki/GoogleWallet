@@ -49,75 +49,24 @@ class WalletPass {
         return $data['access_token'];
     }
 
-    private function formatCodabar($accountNumber) {
-        return 'A' . $accountNumber . 'A';
-    }
-
     public function createPassObject() {
-        $len = 4;
-        $randomBytes = Rand::getBytes($len);
-        $randomNumber = hexdec(bin2hex($randomBytes));
-
-        $randomNumber = 1000 + ($randomNumber % 9000);      
-        $objectId = "{$this->issuerId}.{$randomNumber}"; 
-
-        $form_school = htmlspecialchars($_POST['form_school']);
-        $form_firstName = htmlspecialchars($_POST['form_firstName']);
-        $form_lastName = htmlspecialchars($_POST['form_lastName']);
-
-        $school = $randomNumber;
-        $codabar = $this->formatCodabar($accountNumber);
-        $firstName = $form_firstName;
-        $lastName = $form_lastName;
-        
-
-        $genericObject = [
-            'id' => $objectId,
-            'classId' => $this->classId,
-            'genericType' => 'GENERIC_TYPE_UNSPECIFIED',
-            'url' => 'https://google.com',
-            'logo' => [
-                'sourceUri' => [
-                    'uri' => 'https://www.alleycat.org/wp-content/uploads/2019/03/FELV-cat.jpg'
-                ]
-            ],
-            'cardTitle' => [
-                'defaultValue' => [
-                    'language' => 'en',
-                    'value' => 'hgfgfhfh'
-                ]
-            ],
-            'header' => [
-                'defaultValue' => [
-                    'language' => 'en',
-                    'value' => $firstName . ' ' . $lastName
-                ]
-            ],
-            'barcode' => [
-                'type' => 'CODABAR',
-                'value' => $codabar,
-                'alternateText' => $accountNumber
-            ],
-            'hexBackgroundColor' => '#6e3acf',
-            'heroImage' => [
-                'sourceUri' => [
-                    'uri' => 'https://www.alleycat.org/wp-content/uploads/2019/03/FELV-cat.jpg'
-                ],
-                'contentDescription' => [
-                    'defaultValue' => [
-                        'language' => 'en-US',
-                        'value' => 'HERO_IMAGE_DESCRIPTION'
-                    ]
-                ]
-            ]
-        ];
+        $len = 16; // Increased length for stronger randomness
+        $randomBytes = random_bytes($len);
+        $randomNumber = sprintf('%0' . $len . 'x', bin2hex($randomBytes));
+      
+        $objectId = "{$this->issuerId}.{$randomNumber}";
+      
+        // Assuming form data is already validated
+        $school = $_POST['form_school'];
+        $firstName = $_POST['form_firstName'];
+        $lastName = $_POST['form_lastName'];
 
         $genericObject = [
             'id' => $objectId,
             'classId' => $this->classId,
             'logo' => [
                 'sourceUri' => [
-                    'uri' => 'https://storage.googleapis.com/wallet-lab-tools-codelab-artifacts-public/pass_google_logo.jpg'
+                    'uri' => 'https://raw.githubusercontent.com/PrakiRikeki/GoogleWallet/main/config/ribeka-sqare.png'
                 ],
                 'contentDescription' => [
                     'defaultValue' => [
@@ -129,7 +78,7 @@ class WalletPass {
             'cardTitle' => [
                 'defaultValue' => [
                     'language' => 'en-US',
-                    'value' => 'Schülerausweiß'
+                    'value' => 'Schülerausweis'
                 ]
             ],
             'subheader' => [
@@ -146,25 +95,30 @@ class WalletPass {
             ],
             'textModulesData' => [
                 [
-                    'id' => 'points',
-                    'header' => 'POINTS',
-                    'body' => '1112'
+                    'id' => 'date',
+                    'header' => 'Gültig bis',
+                    'body' => '09/2024'
                 ],
                 [
-                    'id' => 'contacts',
-                    'header' => 'CONTACTS',
-                    'body' => '79'
-                ]
+                    'id' => 'adress',
+                    'header' => 'Wohnort',
+                    'body' => 'Musterstraße 12 12345 Neustadt'
+                ],
+                [
+                    'id' => 'birth_date',
+                    'header' => 'Geburtsdatum',
+                    'body' => '31.07.2022'
+                ],
             ],
             'barcode' => [
-                'type' => 'QR_CODE',
-                'value' => 'BARCODE_VALUE',
-                'alternateText' => ''
+                'type' => 'EAN_13',
+                'value' =>  978020137962,
+                'alternateText' =>  978020137962
             ],
             'hexBackgroundColor' => '#4285f4',
             'heroImage' => [
                 'sourceUri' => [
-                    'uri' => 'https://storage.googleapis.com/wallet-lab-tools-codelab-artifacts-public/google-io-hero-demo-only.png'
+                    'uri' => 'https://raw.githubusercontent.com/PrakiRikeki/GoogleWallet/main/config/banner.png'
                 ],
                 'contentDescription' => [
                     'defaultValue' => [
@@ -173,27 +127,25 @@ class WalletPass {
                     ]
                 ]
             ]
-        ];
+        ];    
         
         
-        
-        $claims = [
+          $claims = [
             'iss' => $this->credentials['client_email'],
             'aud' => 'google',
             'origins' => [],
             'typ' => 'savetowallet',
             'payload' => [
-                'genericObjects' => [$genericObject]
+              'genericObjects' => [$genericObject]
             ]
-        ];
+          ];
+        
 
-        $token = JWT::encode($claims, $this->credentials['private_key'], 'RS256');
-        $saveUrl = "https://pay.google.com/gp/v/save/{$token}";
-
-        return $saveUrl;
-
-
-    }
+          $token = JWT::encode($claims, $this->credentials['private_key'], 'RS256');
+          $saveUrl = "https://pay.google.com/gp/v/save/{$token}";
+        
+          return $saveUrl;
+     }
 }
 
 
